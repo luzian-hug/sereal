@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QPushButton, QDockWidget, QVBoxLayout
-from PyQt5.QtGui import QFont
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QPushButton, QDockWidget, QVBoxLayout
+from PyQt6.QtGui import QFont
 
 class TerminalWidget(QDockWidget):
     """
@@ -27,16 +27,18 @@ class TerminalWidget(QDockWidget):
 
         self.layout.addWidget(self.terminal)
 
-        # Clear button
-        self.clear_button = QPushButton("Clear")
-        self.clear_button.clicked.connect(self.clear)
-        self.layout.addWidget(self.clear_button)
 
     def connect_data_source(self, data_source):
         """
         Connect a DataSource to this terminal.
         """
         data_source.new_line.connect(self.append_line)
+
+    def connect_data_model(self, data_model):
+        """
+        Connect this widget to the central data model for raw lines.
+        """
+        data_model.new_raw_line.connect(self.append_line)
 
     def append_line(self, line: str):
         """
