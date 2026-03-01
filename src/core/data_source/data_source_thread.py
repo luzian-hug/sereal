@@ -14,3 +14,7 @@ class DataSourceThread(QThread):
     def run(self):
         """This runs in the separate thread"""
         self.data_source.start()
+    
+    def stop(self):
+        """Stop the data source and wait for thread to finish"""
+        self.data_source.stop()

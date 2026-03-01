@@ -171,7 +171,29 @@ class ParseWidget(QDockWidget, DataSource):
     def on_number_role_changed(self):
         """
         Called when a number role (X/Y/None) is changed.
+        Ensures only one dropdown can have X selected.
         """
+        # Find which combo has X selected
+        x_selected_index = None
+        for i, (combo, index) in enumerate(self.number_dropdowns):
+            role = combo.currentData()
+            if role == "x":
+                x_selected_index = i
+                break
+        
+        # Update the enabled/disabled state of X option in all dropdowns
+        for i, (combo, index) in enumerate(self.number_dropdowns):
+            model = combo.model()
+            x_item = model.item(1)  # "X" is at index 1
+            
+            if x_selected_index is not None and i != x_selected_index:
+                # Disable X option in all other dropdowns
+                x_item.setFlags(x_item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            else:
+                # Enable X option
+                x_item.setFlags(x_item.flags() | Qt.ItemFlag.ItemIsEnabled)
+        
+        # Now collect the roles
         self.x_group = None
         self.y_groups = []
         

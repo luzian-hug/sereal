@@ -9,6 +9,7 @@ from widgets.terminal_widget import TerminalWidget
 from widgets.parsed_terminal_widget import ParsedTerminalWidget
 from widgets.parse_widget import ParseWidget
 from widgets.plot_widget import PlotWidget
+from widgets.data_source_selector_widget import DataSourceSelectorWidget
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +19,10 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Sereal")
         self.setGeometry(100, 100, 1200, 800)
+
+        self.data_source_selector = DataSourceSelectorWidget()
+        self.data_source_selector.setMaximumWidth(300)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.data_source_selector)
 
         self.parser = ParseWidget()
         self.parser.setMaximumWidth(300)
@@ -33,7 +38,11 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.parsed_terminal)
         
         # Split the bottom dock area horizontally so terminals are side-by-side
-        self.splitDockWidget(self.terminal, self.parsed_terminal, Qt.Orientation.Horizontal) 
+        self.splitDockWidget(self.terminal, self.parsed_terminal, Qt.Orientation.Horizontal)
+        
+        # Current thread and source
+        self.current_thread = None
+        self.current_source = None
 
 
 def main():
@@ -41,27 +50,48 @@ def main():
     # Create data model
     data_model = DataModel()
 
-    # Choose data source (comment/uncomment to switch)
-    # source = TextFileDataSource("example.txt", delay_ms=500)
-    source = SineCosineDateSource(delay_ms=500, step=0.1)
-
-    thread = DataSourceThread(source)
-
     app = QApplication(sys.argv)
     window = MainWindow()
 
     window.show()
 
-    # Wire up the data pipeline
+    # Wire up the data pipeline (static parts)
     window.terminal.connect_data_model(data_model)
     window.parsed_terminal.connect_data_model(data_model)
     window.parsed_terminal.connect_parse_widget(window.parser)
     window.parser.set_data_model(data_model)
     window.parser.set_plot_widget(window.plot)
-    window.parser.connect_upstream(source)
     window.plot.connect_data_model(data_model)
+    
+    # Handle data source selection
+    def on_source_created(source):
+        # Stop current thread if running
+        if window.current_thread:
+            window.current_thread.stop()
+            window.current_thread.wait()
+        
+        # Clear existing data
+        data_model.raw_lines.clear()
+        data_model.parsed_points.clear()
+        data_model.parsed_data_cleared.emit()
+        
+        # Create new thread and start
+        window.current_source = source
+        window.current_thread = DataSourceThread(source)
+        window.parser.connect_upstream(source)
+        window.current_thread.start()
+    
+    def on_stop_requested():
+        # Stop current thread if running
+        if window.current_thread:
+            window.current_thread.stop()
+            window.current_thread.wait()
+            window.current_thread = None
+            window.current_source = None
+    
+    window.data_source_selector.source_created.connect(on_source_created)
+    window.data_source_selector.stop_requested.connect(on_stop_requested)
 
-    thread.start()
     sys.exit(app.exec())
     
 
