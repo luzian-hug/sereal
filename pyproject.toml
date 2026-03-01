@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "serial",
+    "pyserial>=3.5",
     "pyQt6",
     "pyqtgraph>=0.14.0",
 ]

@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import pyqtSignal
 from core.data_source.text_file_data_source import TextFileDataSource
 from core.data_source.sine_cosine_data_source import SineCosineDateSource
+from core.data_source.serial_data_source import SerialDataSource
 
 
 class DataSourceSelectorWidget(QDockWidget):
@@ -31,6 +32,7 @@ class DataSourceSelectorWidget(QDockWidget):
         self.source_type_combo = QComboBox()
         self.source_type_combo.addItem("Text File", "text_file")
         self.source_type_combo.addItem("Sine/Cosine", "sine_cosine")
+        self.source_type_combo.addItem("Serial", "serial")
         self.source_type_combo.currentIndexChanged.connect(self.on_source_type_changed)
         type_layout.addWidget(self.source_type_combo)
         
@@ -47,6 +49,10 @@ class DataSourceSelectorWidget(QDockWidget):
         # Sine/Cosine configuration
         self.sine_cosine_config = self._create_sine_cosine_config()
         self.config_stack.addWidget(self.sine_cosine_config)
+        
+        # Serial configuration
+        self.serial_config = self._create_serial_config()
+        self.config_stack.addWidget(self.serial_config)
         
         # Start and Stop buttons
         buttons_layout = QHBoxLayout()
@@ -135,6 +141,79 @@ class DataSourceSelectorWidget(QDockWidget):
         
         return widget
     
+    def _create_serial_config(self) -> QWidget:
+        """Create configuration widget for serial port source."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        
+        # Port
+        port_layout = QHBoxLayout()
+        port_label = QLabel("Port:")
+        port_layout.addWidget(port_label)
+        
+        self.serial_port_edit = QLineEdit()
+        self.serial_port_edit.setText("/dev/ttyUSB0")
+        self.serial_port_edit.setPlaceholderText("e.g., /dev/ttyUSB0 or COM1")
+        port_layout.addWidget(self.serial_port_edit)
+        
+        layout.addLayout(port_layout)
+        
+        # Baud rate
+        baud_layout = QHBoxLayout()
+        baud_label = QLabel("Baud Rate:")
+        baud_layout.addWidget(baud_label)
+        
+        self.baud_rate_combo = QComboBox()
+        for rate in [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]:
+            self.baud_rate_combo.addItem(str(rate), rate)
+        self.baud_rate_combo.setCurrentIndex(4)  # Default to 115200
+        baud_layout.addWidget(self.baud_rate_combo)
+        
+        layout.addLayout(baud_layout)
+        
+        # Data bits
+        databits_layout = QHBoxLayout()
+        databits_label = QLabel("Data Bits:")
+        databits_layout.addWidget(databits_label)
+        
+        self.data_bits_combo = QComboBox()
+        for bits in [5, 6, 7, 8]:
+            self.data_bits_combo.addItem(str(bits), bits)
+        self.data_bits_combo.setCurrentIndex(3)  # Default to 8
+        databits_layout.addWidget(self.data_bits_combo)
+        
+        layout.addLayout(databits_layout)
+        
+        # Parity
+        parity_layout = QHBoxLayout()
+        parity_label = QLabel("Parity:")
+        parity_layout.addWidget(parity_label)
+        
+        self.parity_combo = QComboBox()
+        self.parity_combo.addItem("None", "N")
+        self.parity_combo.addItem("Even", "E")
+        self.parity_combo.addItem("Odd", "O")
+        self.parity_combo.addItem("Mark", "M")
+        self.parity_combo.addItem("Space", "S")
+        parity_layout.addWidget(self.parity_combo)
+        
+        layout.addLayout(parity_layout)
+        
+        # Stop bits
+        stopbits_layout = QHBoxLayout()
+        stopbits_label = QLabel("Stop Bits:")
+        stopbits_layout.addWidget(stopbits_label)
+        
+        self.stop_bits_combo = QComboBox()
+        self.stop_bits_combo.addItem("1", 1)
+        self.stop_bits_combo.addItem("2", 2)
+        stopbits_layout.addWidget(self.stop_bits_combo)
+        
+        layout.addLayout(stopbits_layout)
+        
+        return widget
+    
     def on_source_type_changed(self, index):
         """Switch the configuration panel based on source type."""
         self.config_stack.setCurrentIndex(index)
@@ -158,12 +237,17 @@ class DataSourceSelectorWidget(QDockWidget):
             file_path = self.file_path_edit.text()
             delay_ms = self.text_file_delay_spin.value()
             source = TextFileDataSource(file_path, delay_ms)
-    
-
         elif source_type == "sine_cosine":
             delay_ms = self.sine_delay_spin.value()
             step = self.step_spin.value()
             source = SineCosineDateSource(delay_ms, step)
+        elif source_type == "serial":
+            port = self.serial_port_edit.text()
+            baudrate = self.baud_rate_combo.currentData()
+            bytesize = self.data_bits_combo.currentData()
+            parity = self.parity_combo.currentData()
+            stopbits = self.stop_bits_combo.currentData()
+            source = SerialDataSource(port, baudrate, bytesize, parity, stopbits)
         else:
             return
         
